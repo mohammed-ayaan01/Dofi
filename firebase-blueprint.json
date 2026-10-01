@@ -1,0 +1,188 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Registered app user with authentication and role credentials",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Firebase Auth user ID"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Full name or alias"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Avatar profile image URL"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["donor", "recipient", "hospital_staff", "admin"],
+          "description": "App role and permission level"
+        },
+        "isVerified": {
+          "type": "boolean",
+          "description": "Whether user identity and credentials have been verified"
+        },
+        "donationsRegisteredCount": {
+          "type": "number",
+          "description": "Number of donation pledges or registrations made by this user"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of user registration"
+        },
+        "lastLoginAt": {
+          "type": "string",
+          "description": "ISO timestamp of last sign in"
+        }
+      },
+      "required": ["id", "email", "displayName", "role", "createdAt"]
+    },
+    "DonorRegistration": {
+      "title": "DonorRegistration",
+      "description": "A registered donation or donor record tracked in the platform database",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique registration record ID"
+        },
+        "registeredByUserId": {
+          "type": "string",
+          "description": "UID of the user who registered this donation"
+        },
+        "registeredByUserEmail": {
+          "type": "string",
+          "description": "Email of the user who registered this donation"
+        },
+        "donorName": {
+          "type": "string",
+          "description": "Full legal or preferred name of the donor"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Direct phone or emergency hotline"
+        },
+        "email": {
+          "type": "string",
+          "description": "Donor email address"
+        },
+        "city": {
+          "type": "string",
+          "description": "City of residence or donation location"
+        },
+        "state": {
+          "type": "string",
+          "description": "State or province"
+        },
+        "categories": {
+          "type": "array",
+          "description": "Donation categories pledged (blood, organ, bone_tissue, hair)"
+        },
+        "bloodGroup": {
+          "type": "string",
+          "description": "ABO and Rh factor blood type if applicable"
+        },
+        "availabilityStatus": {
+          "type": "string",
+          "description": "Availability state (available_now, scheduled, on_call, cooldown)"
+        },
+        "verificationBadge": {
+          "type": "string",
+          "description": "Clinical verification badge level"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "in_screening", "scheduled", "completed"],
+          "description": "Current clinical processing status"
+        },
+        "medicalNotes": {
+          "type": "string",
+          "description": "Clinical or donor intake notes"
+        },
+        "scheduledDate": {
+          "type": "string",
+          "description": "Target procedure or appointment date"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when the donation was registered"
+        }
+      },
+      "required": ["id", "registeredByUserId", "donorName", "categories", "status", "createdAt"]
+    },
+    "DonationRequest": {
+      "title": "DonationRequest",
+      "description": "Emergency or routine clinical requisition created for patients",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Requisition ID"
+        },
+        "hospitalId": {
+          "type": "string",
+          "description": "Facility identifier"
+        },
+        "hospitalName": {
+          "type": "string",
+          "description": "Name of requesting hospital"
+        },
+        "title": {
+          "type": "string",
+          "description": "Requisition title"
+        },
+        "category": {
+          "type": "string",
+          "description": "Donation category"
+        },
+        "urgency": {
+          "type": "string",
+          "description": "Urgency tier (emergency, urgent, standard)"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status (open, matching, verified, completed)"
+        },
+        "patientAlias": {
+          "type": "string",
+          "description": "De-identified patient alias"
+        },
+        "deadlineHoursRemaining": {
+          "type": "number",
+          "description": "Time left in hours"
+        },
+        "city": {
+          "type": "string",
+          "description": "City of facility"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["id", "hospitalName", "title", "category", "urgency", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles tracking who registered in the application"
+    },
+    "/donation_registrations/{registrationId}": {
+      "schema": "DonorRegistration",
+      "description": "Live donation registrations tracking donors who registered donations"
+    },
+    "/donation_requests/{requestId}": {
+      "schema": "DonationRequest",
+      "description": "Clinical donation requisitions and emergency orders"
+    }
+  }
+}

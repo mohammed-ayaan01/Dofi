@@ -1,0 +1,73 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Admins have broadest governance
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'yashwanth89789@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
+      );
+    }
+
+    // Doctors and clinical staff have medical access
+    function isDoctorOrStaff() {
+      return isSignedIn() && (
+        isAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+          getUserData().role == 'hospital_staff' ||
+          getUserData().role == 'doctor' ||
+          getUserData().role == 'hospital'
+        ))
+      );
+    }
+
+    // Connection validation endpoint
+    match /test/{docId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // Registered users in the app
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Registered donations and donor records
+    match /donation_registrations/{registrationId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isSignedIn() && (
+        isAdmin() ||
+        isDoctorOrStaff() ||
+        resource.data.registeredByUserId == request.auth.uid
+      );
+    }
+
+    // Legacy or synced donors collection
+    match /donors/{donorId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isSignedIn() && (isAdmin() || isDoctorOrStaff() || resource.data.userId == request.auth.uid);
+    }
+
+    // Donation requests and clinical requisitions
+    match /donation_requests/{requestId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isSignedIn();
+    }
+  }
+}
+
