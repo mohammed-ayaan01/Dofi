@@ -27,6 +27,7 @@ import { DeadlinesWidget } from './DeadlinesWidget';
 import { CategoryPillars } from './CategoryPillars';
 import { DonationImpactCharts } from './DonationImpactCharts';
 import { PatientSuccessStories } from '../stories/PatientSuccessStories';
+import { ExternalStatsWidget } from './ExternalStatsWidget';
 import { HERO_IMAGE } from '../../data/mockData';
 import { DonationCategory } from '../../types';
 
@@ -40,7 +41,15 @@ export const DashboardView: React.FC = () => {
     setActiveTab,
     setIsCreateRequestModalOpen,
     setIsRegisterDonorModalOpen,
-    openAiModule
+    openAiModule,
+    // Live Firestore-backed counts
+    liveActiveRequests,
+    liveCriticalEmergencies,
+    liveBloodRequests,
+    liveOrganRequests,
+    liveAvailableDonors,
+    liveRegisteredDonors,
+    liveRegisteredUsers
   } = useApp();
 
   const [activeListTab, setActiveListTab] = useState<'requests' | 'donors'>('requests');
@@ -92,31 +101,67 @@ export const DashboardView: React.FC = () => {
     }
   };
 
+  // Determine if there is any live platform activity at all
+  const hasLiveActivity = liveActiveRequests > 0 || liveRegisteredDonors > 0;
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 scroll-smooth relative">
-      {/* 1. Live Urgent Requisitions Auto-Scroller Strip */}
+      {/* 1. Live Platform Activity Scroller Strip — Firestore-backed */}
       <div className="bg-slate-900 text-white rounded-xl p-2.5 border border-slate-800 shadow-xs flex items-center gap-3 overflow-hidden">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-600 text-white font-bold text-[10px] uppercase tracking-wider shrink-0 shadow-xs">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-teal-700 text-white font-bold text-[10px] uppercase tracking-wider shrink-0 shadow-xs">
           <Radio className="h-3 w-3 animate-ping" />
-          <span>Live Scroller</span>
+          <span>Live Activity</span>
         </div>
         <div className="overflow-x-auto scrollbar-none flex items-center gap-6 text-xs whitespace-nowrap py-0.5">
-          {requests.map(req => (
-            <button
-              key={req.id}
-              onClick={() => setSelectedRequest(req)}
-              className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors cursor-pointer shrink-0"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
-              <span className="font-semibold text-white">{req.title}</span>
-              <span className="text-[10px] text-slate-400 font-mono">({req.hospitalName})</span>
-              <span className="text-[10px] bg-teal-950 text-teal-300 border border-teal-800 px-1.5 py-0.2 rounded font-bold uppercase">
-                {req.category}
+          {!hasLiveActivity ? (
+            <span className="flex items-center gap-2 text-slate-400 shrink-0 italic text-[11px]">
+              No live platform activity yet — sign in and create a request to get started
+            </span>
+          ) : (
+            <>
+              {/* Active donation requests — Firestore */}
+              <span className="flex items-center gap-2 text-slate-300 shrink-0">
+                <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
+                <span className="font-semibold text-white">{liveActiveRequests} active donation request{liveActiveRequests !== 1 ? 's' : ''}</span>
               </span>
-            </button>
-          ))}
+              {/* Available donors — Firestore */}
+              <span className="flex items-center gap-2 text-slate-300 shrink-0">
+                <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+                <span className="font-semibold text-white">{liveAvailableDonors} donor{liveAvailableDonors !== 1 ? 's' : ''} available now</span>
+              </span>
+              {/* Registered donors total — Firestore */}
+              {liveRegisteredDonors > 0 && (
+                <span className="flex items-center gap-2 text-slate-300 shrink-0">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  <span className="font-semibold text-white">{liveRegisteredDonors} registered donor{liveRegisteredDonors !== 1 ? 's' : ''}</span>
+                </span>
+              )}
+              {/* Per-category breakdown — Firestore */}
+              {liveBloodRequests > 0 && (
+                <span className="flex items-center gap-2 text-slate-300 shrink-0">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  <span className="font-semibold text-white">{liveBloodRequests} blood request{liveBloodRequests !== 1 ? 's' : ''}</span>
+                  <span className="text-[10px] bg-red-950 text-red-300 border border-red-800 px-1.5 py-0.2 rounded font-bold uppercase">blood</span>
+                </span>
+              )}
+              {liveOrganRequests > 0 && (
+                <span className="flex items-center gap-2 text-slate-300 shrink-0">
+                  <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+                  <span className="font-semibold text-white">{liveOrganRequests} organ request{liveOrganRequests !== 1 ? 's' : ''}</span>
+                  <span className="text-[10px] bg-purple-950 text-purple-300 border border-purple-800 px-1.5 py-0.2 rounded font-bold uppercase">organ</span>
+                </span>
+              )}
+              {liveCriticalEmergencies > 0 && (
+                <span className="flex items-center gap-2 text-slate-300 shrink-0">
+                  <span className="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse" />
+                  <span className="font-semibold text-rose-300">{liveCriticalEmergencies} critical emergency{liveCriticalEmergencies !== 1 ? 's' : ''}</span>
+                </span>
+              )}
+            </>
+          )}
         </div>
       </div>
+
 
       {/* 2. Interactive Sticky Section Scroller Bar */}
       <nav aria-label="Section scroller" className="sticky top-16 z-30 bg-white/95 backdrop-blur-md py-2 px-3 sm:px-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between gap-2 sm:gap-3 transition-all">
@@ -222,63 +267,66 @@ export const DashboardView: React.FC = () => {
         </div>
       </section>
 
-      {/* High-density Impact Stats Grid */}
+      {/* High-density Impact Stats Grid — Firestore-backed */}
       <section id="section-stats" className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-teal-200 shadow-xs relative">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
             <span>Active Requests</span>
             <Activity className="h-4 w-4 text-teal-600" />
           </div>
           <div className="text-2xl font-bold text-slate-900 font-mono tabular-nums">
-            {impactStats.activeRequests}
+            {liveActiveRequests}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">Across 4 categories</div>
+          <div className="text-[11px] text-teal-600 font-medium mt-1">Live · Firestore</div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-sky-200 shadow-xs">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
             <span>Available Donors</span>
             <Users className="h-4 w-4 text-sky-600" />
           </div>
           <div className="text-2xl font-bold text-slate-900 font-mono tabular-nums">
-            {impactStats.availableDonors}
+            {liveAvailableDonors}
           </div>
-          <div className="text-[11px] text-emerald-600 font-medium mt-1">Ready now / 24h</div>
+          <div className="text-[11px] text-sky-600 font-medium mt-1">Live · Ready now / 24h</div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div className="bg-white p-4 rounded-xl border border-rose-200 shadow-xs">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
             <span>Emergency STAT</span>
             <AlertCircle className="h-4 w-4 text-rose-600" />
           </div>
           <div className="text-2xl font-bold text-rose-600 font-mono tabular-nums">
-            {impactStats.criticalEmergencies}
+            {liveCriticalEmergencies}
           </div>
-          <div className="text-[11px] text-rose-500 font-medium mt-1">Requires immediate triage</div>
+          <div className="text-[11px] text-rose-500 font-medium mt-1">Live · Immediate triage</div>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-            <span>Verified Hospitals</span>
+            <span>Registered Donors</span>
             <Building className="h-4 w-4 text-indigo-600" />
           </div>
           <div className="text-2xl font-bold text-slate-900 font-mono tabular-nums">
-            {impactStats.verifiedHospitals}
+            {liveRegisteredDonors}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">UNOS & FDA accredited</div>
+          <div className="text-[11px] text-indigo-600 font-medium mt-1">Live · Firestore</div>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs col-span-2 md:col-span-1">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-            <span>Lives Touched</span>
+            <span>Registered Users</span>
             <Heart className="h-4 w-4 text-rose-500" />
           </div>
           <div className="text-2xl font-bold text-slate-900 font-mono tabular-nums">
-            {impactStats.livesTouchedCount}
+            {liveRegisteredUsers}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">100% voluntary & free</div>
+          <div className="text-[11px] text-slate-400 mt-1">Live · Firebase Auth</div>
         </div>
       </section>
+
+      {/* External Reference Data — NOTTO & e-RaktKosh */}
+      <ExternalStatsWidget />
 
       {/* AI & Machine Learning Intelligence Spotlight */}
       <section id="section-ai-lab" className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white border border-indigo-900/50 shadow-lg space-y-4">

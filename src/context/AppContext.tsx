@@ -35,6 +35,7 @@ import {
   db,
   signInWithGoogle,
   signOutFirebaseUser,
+  syncUserToFirestore,
   saveDonationRegistrationToFirestore,
   RegisteredAppUser,
   FirebaseDonationRegistration
@@ -99,6 +100,16 @@ interface AppContextType {
   registeredAppUsersList: RegisteredAppUser[];
   firebaseDonationsList: FirebaseDonationRegistration[];
   isFirebaseLoading: boolean;
+  firestoreRequests: any[];
+  firestoreRequestsCount: number;
+  // Live Firestore-backed dashboard counts (exclude demo data)
+  liveActiveRequests: number;
+  liveCriticalEmergencies: number;
+  liveBloodRequests: number;
+  liveOrganRequests: number;
+  liveAvailableDonors: number;
+  liveRegisteredDonors: number;
+  liveRegisteredUsers: number;
   loginWithGoogle: () => Promise<void>;
   logoutFirebase: () => Promise<void>;
   registerDonationToFirebase: (data: Partial<FirebaseDonationRegistration>) => Promise<FirebaseDonationRegistration>;
@@ -198,215 +209,121 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [registeredAppUsersList, setRegisteredAppUsersList] = useState<RegisteredAppUser[]>([]);
   const [firebaseDonationsList, setFirebaseDonationsList] = useState<FirebaseDonationRegistration[]>([]);
   const [isFirebaseLoading, setIsFirebaseLoading] = useState<boolean>(false);
+  const [firestoreRequests, setFirestoreRequests] = useState<any[]>([]);
+  const [firestoreRequestsCount, setFirestoreRequestsCount] = useState(0);
 
-  // Firebase Auth State Listener
+  // Firebase Auth State Listener — source of truth for auth state
+  // This runs automatically whenever auth state changes (sign-in, sign-out, page reload)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      console.log('[AppContext] onAuthStateChanged fired. User:', fbUser?.uid ?? 'null');
       setFirebaseUser(fbUser);
+
       if (fbUser) {
+        // Update the demo currentUser fields to reflect the real Firebase user
+        // This does NOT override the demo role switcher — it just syncs displayName/email/photo
         setCurrentUser(prev => ({
           ...prev,
           name: fbUser.displayName || prev.name,
           email: fbUser.email || prev.email,
           avatarUrl: fbUser.photoURL || prev.avatarUrl
         }));
+
+        // Sync/create Firestore user record (decoupled from popup — errors won't break auth display)
+        try {
+          const appUser = await syncUserToFirestore(fbUser);
+          setRegisteredAppUser(appUser);
+          console.log('[AppContext] registeredAppUser set:', appUser.id, appUser.role);
+        } catch (err) {
+          console.warn('[AppContext] Firestore user sync failed — auth state still updated:', err);
+        }
+      } else {
+        // Signed out
+        setRegisteredAppUser(null);
+        console.log('[AppContext] User signed out — registeredAppUser cleared.');
       }
     });
     return () => unsubscribe();
   }, []);
 
-  // Real-time Firestore users listener
+  // Real-time Firestore users listener — only real signed-in users
   useEffect(() => {
     const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const users = snapshot.docs.map(d => d.data() as RegisteredAppUser);
-        setRegisteredAppUsersList(users);
-      } else {
-        const initialUsers: RegisteredAppUser[] = [
-          {
-            id: 'usr_marcus_vance',
-            displayName: 'Marcus Vance',
-            email: 'marcus.vance@donorconnect4care.org',
-            photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
-            role: 'donor',
-            isVerified: true,
-            donationsRegisteredCount: 4,
-            createdAt: '2024-01-15T08:30:00.000Z',
-            lastLoginAt: new Date().toISOString(),
-            provider: 'google'
-          },
-          {
-            id: 'usr_ananya_sharma',
-            displayName: 'Ananya Sharma, RN',
-            email: 'ananya.sharma@donorconnect4care.org',
-            photoURL: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200',
-            role: 'donor',
-            isVerified: true,
-            donationsRegisteredCount: 6,
-            createdAt: '2024-02-10T11:20:00.000Z',
-            lastLoginAt: new Date().toISOString(),
-            provider: 'google'
-          },
-          {
-            id: 'usr_elena_rostova',
-            displayName: 'Elena Rostova',
-            email: 'elena.rostova@care.net',
-            photoURL: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200',
-            role: 'recipient',
-            isVerified: true,
-            donationsRegisteredCount: 1,
-            createdAt: '2024-03-01T14:45:00.000Z',
-            lastLoginAt: new Date().toISOString(),
-            provider: 'google'
-          },
-          {
-            id: 'usr_dr_sarah_chen',
-            displayName: 'Dr. Sarah Chen, MD',
-            email: 'sarah.chen@metromedical.org',
-            photoURL: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200',
-            role: 'hospital_staff',
-            isVerified: true,
-            donationsRegisteredCount: 12,
-            createdAt: '2023-11-01T09:00:00.000Z',
-            lastLoginAt: new Date().toISOString(),
-            provider: 'google'
-          },
-          {
-            id: 'usr_compliance_officer',
-            displayName: 'Platform Compliance Officer',
-            email: 'compliance@donorconnect4care.org',
-            photoURL: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200',
-            role: 'admin',
-            isVerified: true,
-            donationsRegisteredCount: 0,
-            createdAt: '2023-10-01T00:00:00.000Z',
-            lastLoginAt: new Date().toISOString(),
-            provider: 'google'
-          }
-        ];
-        initialUsers.forEach(u => {
-          setDoc(doc(db, 'users', u.id), u).catch(() => {});
-        });
-        setRegisteredAppUsersList(initialUsers);
-      }
+      const users = snapshot.docs.map(d => d.data() as RegisteredAppUser);
+      setRegisteredAppUsersList(users);
     }, (error) => {
       console.warn('[Firestore] users snapshot error:', error);
     });
     return () => unsubscribe();
   }, []);
 
-  // Real-time Firestore donation registrations listener
+  // Real-time Firestore donation registrations listener — only real user-submitted registrations
   useEffect(() => {
     const q = query(collection(db, 'donation_registrations'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const donations = snapshot.docs.map(d => d.data() as FirebaseDonationRegistration);
-        setFirebaseDonationsList(donations);
-      } else {
-        const initialDonations: FirebaseDonationRegistration[] = [
-          {
-            id: 'reg_don_001',
-            registeredByUserId: 'usr_marcus_vance',
-            registeredByUserEmail: 'marcus.vance@donorconnect4care.org',
-            registeredByUserName: 'Marcus Vance',
-            donorName: 'Marcus Vance',
-            phone: '+1 (312) 555-0199',
-            email: 'marcus.vance@donorconnect4care.org',
-            city: 'Chicago',
-            state: 'IL',
-            categories: ['blood', 'bone_tissue'],
-            bloodGroup: 'O-',
-            availabilityStatus: 'available_now',
-            verificationBadge: 'Verified Platform Registrant',
-            status: 'active',
-            medicalNotes: 'Whole Blood & Platelets apheresis pledged. HLA swab kit completed.',
-            createdAt: '2024-02-14T09:15:00.000Z'
-          },
-          {
-            id: 'reg_don_002',
-            registeredByUserId: 'usr_ananya_sharma',
-            registeredByUserEmail: 'ananya.sharma@donorconnect4care.org',
-            registeredByUserName: 'Ananya Sharma, RN',
-            donorName: 'Ananya Sharma, RN',
-            phone: '+1 (312) 555-0288',
-            email: 'ananya.sharma@donorconnect4care.org',
-            city: 'Evanston',
-            state: 'IL',
-            categories: ['blood', 'organ'],
-            bloodGroup: 'A+',
-            availabilityStatus: 'available_now',
-            verificationBadge: 'Clinical Professional Verified',
-            status: 'active',
-            medicalNotes: 'Living altruistic kidney and cornea pledged. Consenting next-of-kin informed.',
-            createdAt: '2024-03-05T13:40:00.000Z'
-          },
-          {
-            id: 'reg_don_003',
-            registeredByUserId: 'usr_dr_sarah_chen',
-            registeredByUserEmail: 'sarah.chen@metromedical.org',
-            registeredByUserName: 'Dr. Sarah Chen, MD',
-            donorName: 'Chloe Bennett',
-            phone: '+1 (312) 555-0377',
-            email: 'chloe.bennett@care.org',
-            city: 'Oak Park',
-            state: 'IL',
-            categories: ['hair'],
-            availabilityStatus: 'available_now',
-            verificationBadge: 'Wig Guild Certified',
-            status: 'completed',
-            medicalNotes: '14-inch untreated virgin hair pledged and packaged for pediatric cranial oncology prosthetics.',
-            createdAt: '2024-03-12T16:20:00.000Z'
-          },
-          {
-            id: 'reg_don_004',
-            registeredByUserId: 'usr_marcus_vance',
-            registeredByUserEmail: 'marcus.vance@donorconnect4care.org',
-            registeredByUserName: 'Marcus Vance',
-            donorName: 'David K. Miller',
-            phone: '+1 (312) 555-0455',
-            email: 'david.miller@donorconnect4care.org',
-            city: 'Naperville',
-            state: 'IL',
-            categories: ['bone_tissue', 'blood'],
-            bloodGroup: 'B+',
-            availabilityStatus: 'scheduled',
-            verificationBadge: 'FACT / NMDP Registered',
-            status: 'scheduled',
-            medicalNotes: 'Allogeneic bone marrow harvest procedure scheduled for acute leukemia patient.',
-            scheduledDate: '2026-10-15',
-            createdAt: '2024-03-20T10:00:00.000Z'
-          }
-        ];
-        initialDonations.forEach(d => {
-          setDoc(doc(db, 'donation_registrations', d.id), d).catch(() => {});
-        });
-        setFirebaseDonationsList(initialDonations);
-      }
+      const donations = snapshot.docs.map(d => d.data() as FirebaseDonationRegistration);
+      setFirebaseDonationsList(donations);
     }, (error) => {
       console.warn('[Firestore] donation_registrations snapshot error:', error);
     });
     return () => unsubscribe();
   }, []);
 
+  // Real-time Firestore donation_requests listener
+  useEffect(() => {
+    const q = query(collection(db, 'donation_requests'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allItems = snapshot.docs.map(d => d.data());
+      setFirestoreRequests(allItems);
+      // Count only non-demo real user-created requests
+      const realCount = allItems.filter(d => d._isDemoData === false).length;
+      setFirestoreRequestsCount(realCount);
+    }, (error) => {
+      console.warn('[Firestore] donation_requests snapshot error:', error);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const loginWithGoogle = async () => {
     setIsFirebaseLoading(true);
+    console.log('[AppContext] Initiating Google Sign-In...');
     try {
-      const appUser = await signInWithGoogle();
-      setRegisteredAppUser(appUser);
+      const fbUser = await signInWithGoogle();
+      console.log('[AppContext] Google Sign-In popup completed for user:', fbUser.uid, fbUser.email);
+      // The onAuthStateChanged listener handles setting firebaseUser and syncing Firestore
       const notif: NotificationItem = {
         id: `notif_login_${Date.now()}`,
-        userId: appUser.id,
+        userId: fbUser.uid,
         title: 'Google Sign-In Successful',
-        message: `Welcome, ${appUser.displayName}! Your account is securely connected to Firebase and tracked in Firestore.`,
+        message: `Welcome, ${fbUser.displayName || 'Community Member'}! Your account is securely connected to Firebase Auth.`,
         category: 'blood',
         urgency: 'standard',
         timestamp: 'Just now',
         isRead: false
       };
       setNotifications(prev => [notif, ...prev]);
-    } catch (err) {
-      console.error('Firebase sign-in error:', err);
+    } catch (err: unknown) {
+      const errorObj = err as { code?: string; message?: string };
+      console.error('[AppContext] ❌ Google Sign-In failed:', errorObj?.code, errorObj?.message || err);
+      // Add a helpful notification if the popup was closed vs an actual error
+      if (errorObj?.code !== 'auth/popup-closed-by-user') {
+        const notif: NotificationItem = {
+          id: `notif_err_${Date.now()}`,
+          userId: 'system',
+          title: 'Sign-In Notice',
+          message: errorObj?.code === 'auth/operation-not-allowed'
+            ? 'Google Sign-In is not enabled in Firebase Console. Please enable it under Authentication > Sign-in method.'
+            : errorObj?.code === 'auth/unauthorized-domain'
+            ? 'This domain is not authorized for Google Sign-In. Add localhost to Authorized Domains in Firebase Console.'
+            : `Authentication could not be completed: ${errorObj?.message || 'Unknown error'}`,
+          category: 'blood',
+          urgency: 'emergency',
+          timestamp: 'Just now',
+          isRead: false
+        };
+        setNotifications(prev => [notif, ...prev]);
+      }
     } finally {
       setIsFirebaseLoading(false);
     }
@@ -628,6 +545,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     fullRequest.matchedDonorIds = matchedDonors.map(d => d.id);
 
     setRequests(prev => [fullRequest, ...prev]);
+
+    // Persist new request to Firestore donation_requests collection
+    setDoc(doc(db, 'donation_requests', id), {
+      ...fullRequest,
+      _isDemoData: false,
+      _createdVia: 'dofi_app'
+    }).catch(err => console.warn('[Firestore] donation_requests write failed:', err));
 
     // Send notification
     const newNotif: NotificationItem = {
@@ -962,16 +886,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotifications(prev => [notif, ...prev]);
   };
 
+  // --- LIVE FIRESTORE-BACKED STATS ---
+  // Only count real (non-demo) documents. If Firestore is empty, counts show 0.
+  const liveActiveRequests = firestoreRequests.filter(
+    r => r._isDemoData !== true && r.status !== 'completed' && r.status !== 'cancelled'
+  ).length;
+  const liveCriticalEmergencies = firestoreRequests.filter(
+    r => r._isDemoData !== true && r.urgency === 'emergency' && r.status !== 'completed'
+  ).length;
+  const liveBloodRequests = firestoreRequests.filter(
+    r => r._isDemoData !== true && r.category === 'blood' && r.status !== 'completed' && r.status !== 'cancelled'
+  ).length;
+  const liveOrganRequests = firestoreRequests.filter(
+    r => r._isDemoData !== true && r.category === 'organ' && r.status !== 'completed' && r.status !== 'cancelled'
+  ).length;
+  // Available donors: real Firestore donation_registrations with available status
+  const liveAvailableDonors = firebaseDonationsList.filter(
+    d => d.availabilityStatus === 'available_now' || d.availabilityStatus === 'available_24h'
+  ).length;
+  // Registered donors: all real Firestore donation_registrations
+  const liveRegisteredDonors = firebaseDonationsList.length;
+  // Registered users from Firestore users collection
+  const liveRegisteredUsers = registeredAppUsersList.length;
+
   const impactStats: ImpactStats = {
-    activeRequests: requests.filter(r => r.status !== 'completed' && r.status !== 'cancelled').length,
-    availableDonors: donors.filter(d => d.availabilityStatus === 'available_now' || d.availabilityStatus === 'available_24h').length,
-    criticalEmergencies: requests.filter(r => r.urgency === 'emergency' && r.status !== 'completed').length,
+    activeRequests: liveActiveRequests,
+    availableDonors: liveAvailableDonors,
+    criticalEmergencies: liveCriticalEmergencies,
     verifiedHospitals: organizations.filter(o => o.isVerified).length,
-    livesTouchedCount: 148,
-    bloodUnitsCollected: 412,
-    hairWigsGifted: 53,
-    organTransplantsFacilitated: 19,
-    marrowPledgesRegistered: 84
+    // Below are demo/placeholder lifetime stats — not derived from live Firestore data
+    livesTouchedCount: 0,
+    bloodUnitsCollected: 0,
+    hairWigsGifted: 0,
+    organTransplantsFacilitated: 0,
+    marrowPledgesRegistered: 0
   };
 
   return (
@@ -1041,6 +989,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         registeredAppUsersList,
         firebaseDonationsList,
         isFirebaseLoading,
+        firestoreRequests,
+        firestoreRequestsCount,
+        liveActiveRequests,
+        liveCriticalEmergencies,
+        liveBloodRequests,
+        liveOrganRequests,
+        liveAvailableDonors,
+        liveRegisteredDonors,
+        liveRegisteredUsers,
         loginWithGoogle,
         logoutFirebase,
         registerDonationToFirebase

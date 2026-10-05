@@ -1008,6 +1008,93 @@ function getSimulatedCancerHospitals(query: string) {
 }
 
 // -------------------------------------------------------------
+// EXTERNAL API ADAPTER: e-RaktKosh (MoHFW Blood Bank Platform)
+// -------------------------------------------------------------
+// IMPORTANT: e-RaktKosh does NOT provide a public REST API.
+// Integration requires institutional credentials issued by MoHFW to licensed blood banks.
+// This adapter is architecturally ready for future integration when authorization is obtained.
+// Contact: mraktkosh@gmail.com | Portal: https://eraktkosh.mohfw.gov.in
+// Phone: +91 120 306 3311
+app.get('/api/external/eraktkosh', (_req, res) => {
+  const eraktkoshApiAvailable = !!process.env.ERAKTKOSH_INSTITUTION_TOKEN && !!process.env.ERAKTKOSH_HOSPITAL_CODE;
+
+  if (eraktkoshApiAvailable) {
+    // Future: make actual HTTP request to e-RaktKosh when credentials are available
+    // The endpoint and headers below are based on e-RaktKosh BBMS integration documentation
+    // Example real request would be:
+    // POST https://eraktkosh.mohfw.gov.in/BLDAHIMS/bloodbank/transactions/bbwl.thtml
+    // Headers: Authorization: Bearer <token>, X-Hospital-Code: <code>
+    // This block would be replaced with actual fetch() call once credentials are issued
+    res.json({
+      source: 'e-RaktKosh (Ministry of Health & Family Welfare, India)',
+      integrationStatus: 'credentials_present_but_live_request_not_yet_implemented',
+      note: 'Credentials detected. To complete integration, implement the actual HTTP request to the e-RaktKosh BBMS endpoint.',
+      lastChecked: new Date().toISOString()
+    });
+  } else {
+    // No credentials — report adapter status honestly
+    res.json({
+      source: 'e-RaktKosh (Ministry of Health & Family Welfare, India)',
+      integrationStatus: 'pending_institutional_authorization',
+      reason: 'e-RaktKosh does not provide a public REST API. Integration requires institutional credentials from MoHFW, issued only to licensed blood banks and healthcare institutions.',
+      officialPortal: 'https://eraktkosh.mohfw.gov.in',
+      contactForIntegration: 'mraktkosh@gmail.com',
+      phone: '+91 120 306 3311',
+      adapterArchitecture: {
+        description: 'This adapter is architecturally ready. Once MoHFW issues credentials, replace this response with a real HTTP request.',
+        endpointPlaceholder: 'POST https://eraktkosh.mohfw.gov.in/BLDAHIMS/bloodbank/transactions/bbwl.thtml',
+        requiredEnvVars: ['ERAKTKOSH_INSTITUTION_TOKEN', 'ERAKTKOSH_HOSPITAL_CODE'],
+        expectedResponseFields: ['bloodBankCode', 'bloodGroup', 'componentType', 'unitsAvailable', 'lastUpdated'],
+        implementWhen: 'MoHFW grants institutional access to Dofi as a registered healthcare coordination platform'
+      },
+      lastChecked: new Date().toISOString()
+    });
+  }
+});
+
+// -------------------------------------------------------------
+// EXTERNAL DATA: NOTTO Official Published Statistics
+// -------------------------------------------------------------
+// IMPORTANT: NOTTO does NOT provide a public REST API.
+// These are official aggregate statistics from PIB press releases and NOTTO annual reports.
+// They are NOT real-time individual donor availability data.
+// Sources:
+//   - PIB Press Release dated March 2024 (Ministry of Health & Family Welfare)
+//   - NOTTO Annual Report 2023-24
+//   - Press Information Bureau: https://pib.gov.in
+//   - NOTTO Portal: https://notto.mohfw.gov.in
+app.get('/api/external/notto', (_req, res) => {
+  res.json({
+    source: 'NOTTO — National Organ & Tissue Transplant Organisation (MoHFW, India)',
+    dataType: 'officially_published_statistics',
+    integrationStatus: 'static_official_figures',
+    liveApiAvailable: false,
+    note: 'NOTTO does not expose a public real-time API. The figures below are sourced from official PIB press releases and NOTTO Annual Reports. They represent aggregate national statistics, NOT individual donor availability or real-time blood stock levels.',
+    officialPortal: 'https://notto.mohfw.gov.in',
+    helpline: '1800-11-4770',
+    statistics: {
+      // Source: PIB, Ministry of Health & Family Welfare — 2024 data releases
+      totalDeceasedDonors2023: 1028,
+      totalOrganTransplants2023: 18378,
+      totalOrganTransplantsAllTimeCumulative: 92000,
+      registeredTransplantCenters: 260,
+      registeredRetrievalCenters: 900,
+      estimatedWaitlistKidney: 220000,
+      estimatedWaitlistLiver: 80000,
+      estimatedWaitlistHeart: 15000,
+      cornealTransplants2023: 112000,
+      mostActiveStateForDeceasedDonation: 'Tamil Nadu',
+      mostActiveDonorCity: 'Chennai',
+      dataYear: 2023,
+      dataSource: 'PIB Press Release (MoHFW), NOTTO Annual Report 2023-24',
+      disclaimer: 'These are officially published aggregate statistics for India as a whole. They represent the national transplant ecosystem and do NOT reflect individual donor availability on this platform or real-time blood stock levels at any specific blood bank.'
+    },
+    lastPublished: '2024-03-15',
+    fetchedAt: new Date().toISOString()
+  });
+});
+
+// -------------------------------------------------------------
 // HEALTH CHECK
 // -------------------------------------------------------------
 app.get(['/health', '/_health', '/api/health'], (_req, res) => {
