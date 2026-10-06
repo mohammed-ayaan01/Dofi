@@ -18,6 +18,7 @@ import {
   getDocs,
   query,
   orderBy,
+  where,
   onSnapshot,
   Timestamp
 } from 'firebase/firestore';
@@ -61,9 +62,10 @@ export interface RegisteredAppUser {
   email: string;
   displayName: string;
   photoURL?: string;
-  role: 'donor' | 'recipient' | 'hospital_staff' | 'admin';
+  role: 'user' | 'donor' | 'hospital' | 'admin' | 'hospital_staff';
   isVerified: boolean;
   donationsRegisteredCount: number;
+  organizationId?: string;
   createdAt: string;
   lastLoginAt: string;
   provider: string;
@@ -144,33 +146,40 @@ export async function signInWithGoogle(): Promise<FirebaseUser> {
 export async function syncUserToFirestore(fbUser: FirebaseUser): Promise<RegisteredAppUser> {
   const userDocRef = doc(db, 'users', fbUser.uid);
   const nowIso = new Date().toISOString();
+  const isAuthorizedAdminEmail = fbUser.email === 'mohammedayaan9683@gmail.com';
 
   try {
     const existingSnap = await getDoc(userDocRef);
 
     if (existingSnap.exists()) {
       const data = existingSnap.data() as RegisteredAppUser;
+      const resolvedRole: RegisteredAppUser['role'] = isAuthorizedAdminEmail ? 'admin' : (data.role || 'donor');
       const appUser: RegisteredAppUser = {
         ...data,
-        displayName: fbUser.displayName || data.displayName || 'Registered User',
+        role: resolvedRole,
+        displayName: fbUser.displayName || data.displayName || (isAuthorizedAdminEmail ? 'Platform Administrator' : 'Registered User'),
         email: fbUser.email || data.email,
         photoURL: fbUser.photoURL || data.photoURL,
         lastLoginAt: nowIso
       };
-      await updateDoc(userDocRef, {
+      const updatePayload: Record<string, unknown> = {
         displayName: appUser.displayName,
         photoURL: appUser.photoURL,
         lastLoginAt: nowIso
-      }).catch(e => console.warn('[Firebase] Could not update lastLoginAt:', e));
-      console.log('[Firebase] Existing user record updated:', appUser.id);
+      };
+      if (data.role !== resolvedRole) {
+        updatePayload.role = resolvedRole;
+      }
+      await updateDoc(userDocRef, updatePayload).catch(e => console.warn('[Firebase] Could not update userDoc:', e));
+      console.log('[Firebase] Existing user record updated:', appUser.id, 'role:', appUser.role);
       return appUser;
     } else {
       const appUser: RegisteredAppUser = {
         id: fbUser.uid,
         email: fbUser.email || '',
-        displayName: fbUser.displayName || 'Registered Community Member',
+        displayName: fbUser.displayName || (isAuthorizedAdminEmail ? 'Platform Administrator' : 'Registered Community Member'),
         photoURL: fbUser.photoURL || undefined,
-        role: 'donor',
+        role: isAuthorizedAdminEmail ? 'admin' : 'donor',
         isVerified: true,
         donationsRegisteredCount: 0,
         createdAt: nowIso,
@@ -178,7 +187,7 @@ export async function syncUserToFirestore(fbUser: FirebaseUser): Promise<Registe
         provider: 'google'
       };
       await setDoc(userDocRef, appUser);
-      console.log('[Firebase] New user record created:', appUser.id);
+      console.log('[Firebase] New user record created:', appUser.id, 'role:', appUser.role);
       return appUser;
     }
   } catch (error) {
@@ -187,10 +196,10 @@ export async function syncUserToFirestore(fbUser: FirebaseUser): Promise<Registe
     return {
       id: fbUser.uid,
       email: fbUser.email || '',
-      displayName: fbUser.displayName || 'Registered User',
+      displayName: fbUser.displayName || (isAuthorizedAdminEmail ? 'Platform Administrator' : 'Registered User'),
       photoURL: fbUser.photoURL || undefined,
-      role: 'donor',
-      isVerified: false,
+      role: isAuthorizedAdminEmail ? 'admin' : 'donor',
+      isVerified: isAuthorizedAdminEmail,
       donationsRegisteredCount: 0,
       createdAt: nowIso,
       lastLoginAt: nowIso,
@@ -268,3 +277,53 @@ export async function fetchDonationRegistrations(): Promise<FirebaseDonationRegi
     return [];
   }
 }
+
+/**
+ * Save or update a donor response record in Firestore `donor_responses`
+ */
+export async function saveDonorResponseToFirestore(response: {
+  id: string;
+  requestId: string;
+  donorId: string;
+  donorUserId: string;
+  donorName: string;
+  bloodGroup: string;
+  city?: string;
+  status: 'available' | 'confirmed' | 'fulfilled' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
+  note?: string;
+  hospitalId?: string;
+  requesterId?: string;
+}): Promise<void> {
+  const docRef = doc(db, 'donor_responses', response.id);
+  await setDoc(docRef, response);
+}
+
+/**
+ * Fetch donor responses from Firestore with optional security-scoped filter
+ */
+export async function fetchDonorResponses(filter?: {
+  donorUserId?: string;
+  hospitalId?: string;
+  requesterId?: string;
+}): Promise<any[]> {
+  try {
+    let q;
+    if (filter?.donorUserId) {
+      q = query(collection(db, 'donor_responses'), where('donorUserId', '==', filter.donorUserId));
+    } else if (filter?.hospitalId) {
+      q = query(collection(db, 'donor_responses'), where('hospitalId', '==', filter.hospitalId));
+    } else if (filter?.requesterId) {
+      q = query(collection(db, 'donor_responses'), where('requesterId', '==', filter.requesterId));
+    } else {
+      q = query(collection(db, 'donor_responses'), orderBy('createdAt', 'desc'));
+    }
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => d.data());
+  } catch (err) {
+    console.warn('[Firebase] fetchDonorResponses error:', err);
+    return [];
+  }
+}
+

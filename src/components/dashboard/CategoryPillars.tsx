@@ -36,14 +36,14 @@ export const CategoryPillars: React.FC = () => {
       icon: <Droplet className="h-6 w-6 text-rose-600" />,
       colorClass: 'border-t-4 border-t-rose-600',
       tagClass: 'text-rose-700 bg-rose-50 border-rose-200',
-      stats: '412 Units Collected this Quarter',
+      stats: 'Sample Blood Donors in Demo',
       guidelines: [
         'Must be at least 17 years old and weigh 110+ lbs',
         'Standard whole blood donation frequency: 56 days',
         'Platelet apheresis donors can donate every 7 days',
         'O- universal red cell donor; AB+ universal plasma donor'
       ],
-      complianceNote: 'FDA blood banking standards strictly enforced. No commercial remuneration.'
+      complianceNote: 'No commercial remuneration. Facilitated through licensed healthcare facilities only.'
     },
     {
       id: 'organ',
@@ -53,31 +53,31 @@ export const CategoryPillars: React.FC = () => {
       icon: <Heart className="h-6 w-6 text-teal-600" />,
       colorClass: 'border-t-4 border-t-teal-600',
       tagClass: 'text-teal-700 bg-teal-50 border-teal-200',
-      stats: '19 Hospital Transplants Facilitated',
+      stats: 'Sample Organ Profiles in Demo',
       guidelines: [
         'Strictly non-commercial under NOTA (42 U.S.C. 274e)',
         'Living kidney & partial liver altruistic evaluation',
         'Deceased organ donor pledge card synchronization',
         'Hospital independent donor advocate assigned to each pledge'
       ],
-      complianceNote: 'Matches occur strictly through UNOS-accredited surgical transplant centers.'
+      complianceNote: 'Facilitated exclusively through licensed surgical transplant centers.'
     },
     {
       id: 'bone_tissue',
       title: 'Bone & Tissue Support',
       subtitle: 'Bone Marrow, Stem Cells & Allografts',
-      description: 'Connect with certified tissue banks and NMDP-aligned registries for leukemia, lymphoma, and reconstructive surgery.',
+      description: 'Connect with certified tissue banks and bone marrow registries for leukemia, lymphoma, and reconstructive surgery.',
       icon: <Bone className="h-6 w-6 text-indigo-600" />,
       colorClass: 'border-t-4 border-t-indigo-600',
       tagClass: 'text-indigo-700 bg-indigo-50 border-indigo-200',
-      stats: '84 Marrow Pledges Registered',
+      stats: 'Sample Marrow Profiles in Demo',
       guidelines: [
         'Ages 18-40 eligible for bone marrow stem cell registry',
         'Simple cheek swab kit delivers full HLA high-res typing',
         'Tissue allografts (bone graft, cornea, skin, heart valves)',
         'Medical board clearance and viral panel screening required'
       ],
-      complianceNote: 'American Association of Tissue Banks (AATB) accredited facilities only.'
+      complianceNote: 'Facilitated through accredited tissue banking facilities only.'
     },
     {
       id: 'hair',

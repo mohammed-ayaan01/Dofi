@@ -1,255 +1,234 @@
-# 🏥 DonorConnect 4Care
+# Dofi — Healthcare Donation Coordination Prototype
 
-> **Modern 4-in-1 Healthcare Donor & Recipient Assistance Platform uniting Blood, Organ, Bone Marrow & Tissue, and Hair donation matching with clinical verification, ethical governance, and AI-powered clinical intelligence.**
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%2B%20Auth-FFCA28?logo=firebase)](https://firebase.google.com)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-v4-06B6D4?logo=tailwindcss)](https://tailwindcss.com)
 
-[![React](https://img.shields.io/badge/React-19.0-61dafb?style=flat-square&logo=react)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-38bdf8?style=flat-square&logo=tailwindcss)](https://tailwindcss.com)
-[![Firebase](https://img.shields.io/badge/Firebase-Auth%20%26%20Firestore-ffca28?style=flat-square&logo=firebase)](https://firebase.google.com)
-[![Google Gemini API](https://img.shields.io/badge/Google_Gemini-3.1%20Flash-4285f4?style=flat-square&logo=google)](https://ai.google.dev)
-[![Vite](https://img.shields.io/badge/Vite-6.0+-646cff?style=flat-square&logo=vite)](https://vitejs.dev)
-[![Express](https://img.shields.io/badge/Express-4.21-000000?style=flat-square&logo=express)](https://expressjs.com)
-[![Compliance](https://img.shields.io/badge/Compliance-NOTA%20%7C%20HIPAA%20%7C%20FDA-059669?style=flat-square)](https://optn.transplant.hrsa.gov/governance/national-organ-transplant-act/)
+> **⚠️ Prototype Notice:** Dofi is an academic/hackathon prototype. It is **not** a certified clinical system, **not** HIPAA certified, and **not** approved for real medical decision-making. All AI outputs require qualified clinical review.
 
 ---
 
-## 📋 Table of Contents
+## 1. What is Dofi?
 
-- [Overview & Mission](#-overview--mission)
-- [4 Core Healthcare Donation Programs](#-4-core-healthcare-donation-programs)
-- [Role-Based Access Control (RBAC) & Privacy Matrix](#-role-based-access-control-rbac--privacy-matrix)
-- [Security & Authorization Guard (RegistrationsAuthWrapper)](#-security--authorization-guard-registrationsauthwrapper)
-- [AI Clinical Intelligence Suite](#-ai-clinical-intelligence-suite)
-- [Technology Architecture](#-technology-architecture)
-- [Project Directory Structure](#-project-directory-structure)
-- [Getting Started & Local Setup](#-getting-started--local-setup)
-- [Environment Configuration](#-environment-configuration)
-- [Available Scripts](#-available-scripts)
-- [Clinical Ethics & Governance Standards](#-clinical-ethics--governance-standards)
-- [License](#-license)
+**Dofi** (formerly *DonorConnect 4Care* internally) is a healthcare donation coordination prototype that connects donors, recipients, and healthcare facilities across four donation categories: **Blood**, **Organ**, **Bone Marrow & Tissue**, and **Hair**.
+
+It demonstrates a full-stack architecture combining real Firebase Authentication and Firestore data storage with Google Gemini AI-assisted analysis — built to prototype how modern web technologies could support donation coordination workflows. This is a technical demonstration, not a production medical system.
 
 ---
 
-## 🌟 Overview & Mission
+## 2. Problem It Solves
 
-**DonorConnect 4Care** bridges critical healthcare donation gaps by integrating four vital donation streams into a unified, ethically governed clinical hub. Rather than fragmented databases, this platform provides real-time matching between healthcare facilities, altruistic donors, and vulnerable patients requiring urgent transfusions, transplants, stem cell grafts, or oncological prosthetics.
+Finding and coordinating donation matches — especially for urgent or rare-type requests — is a fragmented, time-sensitive process. Dofi prototypes:
 
-### Key Highlights
-- **Real-Time STAT Emergency Dispatch**: Live tickers broadcast urgent hospital needs for immediate clinical response.
-- **Strict Role-Based Access Control**: Tailored portals for Doctors, Recipients, Compliance Officers (Admins), and Donors.
-- **Privacy by Design**: Sensitive personal contact numbers and emails are shielded from public access in accordance with **HIPAA** and **NOTA** regulations.
-- **Google Gemini Medical AI**: 10+ clinical micro-services running on `@google/genai` assisting clinical staff with HLA crossmatching, donor eligibility screening, logistics optimization, and lab report interpretation.
-- **Live Firebase Integration**: Real-time Firestore synchronization for users, verified pledges, and status transitions.
+- A **unified request pipeline** so donors and recipients can coordinate across categories in one place
+- **AI-assisted compatibility analysis** (cross-match, HLA, blood type) to help surface relevant information quickly — with the explicit understanding that outputs must be reviewed by qualified clinicians
+- A **real-time dashboard** driven by Firestore so coordinators can monitor request status as it changes
 
 ---
 
-## 🩺 4 Core Healthcare Donation Programs
-
-| Program | Clinical Scope | Eligibility & Specifications |
-| :--- | :--- | :--- |
-| 🩸 **Blood & Platelet Apheresis** | Whole blood, plateletpheresis, packed RBCs, and convalescent plasma | ABO/Rh typing, minimum hemoglobin thresholds, 56-day whole blood / 7-day platelet donation intervals. |
-| 🫀 **Living & Deceased Organ Pledges** | Living kidney/liver lobe altruistic pledges, corneas, and deceased donor declarations | NOTA compliance, UNOS registry guidelines, strict non-commercial altruistic protocols with family consent. |
-| 🦴 **Bone Marrow & Tissue Allografts** | Allogeneic hematopoietic stem cells, cord blood, and bone/tissue grafts | HLA-A, -B, -C, -DRB1, -DQB1 high-resolution typing, buccal swab kit registration, FACT/NMDP standards. |
-| 💇 **Hair for Cranial Oncology Prosthetics** | Pediatric cancer wigs and alopecia totalis medical cranial prostheses | Minimum 8–14 inches untreated hair, secured in braided pony-tails, compliant with Certified Wig Guild guidelines. |
-
----
-
-## 🛡️ Role-Based Access Control (RBAC) & Privacy Matrix
-
-DonorConnect 4Care enforces a strict 4-tier persona clearance model across the entire application:
-
-| Persona | Clearance Level | Visible Information | Available Actions |
-| :--- | :--- | :--- | :--- |
-| **👨‍⚕️ Doctors** | Clinical Staff | Relevant clinical donor & patient compatibility data, blood types, HLA notes, and Direct Clinical Hotline numbers (`(555) 019-XXXX`). | • Match with patient requisition<br>• Copy clinical specimen briefs<br>• Advance requisition status pipeline |
-| **🩸 Recipients** | Patient / Family | Public compatibility specs, blood group, pledged category, and geographic proximity. **Private personal phone & email are masked.** | • **Request Donor via Care Team** (dispatches hospital-mediated matching request without exposing private data) |
-| **👨‍💼 Admins** | Compliance & Governance | Broadest access tier with unmasked registration records, raw Firebase Auth UIDs, real phone numbers, and full audit logs. | • Toggle verification status<br>• Export complete JSON / CSV database<br>• Governance audit log inspection |
-| **🔒 Other Users / Public** | Community Member | Aggregate availability metrics and anonymized pledge records (`Donor M.V. (Verified)`). | • Register altruistic donation pledge<br>• View educational resources & NOTA ethics<br>• Switch to authorized profile |
-
----
-
-## 🔒 Security & Authorization Guard (`RegistrationsAuthWrapper`)
-
-The Registrations Database is protected by a dedicated React authorization boundary component (`RegistrationsAuthWrapper.tsx`):
-
-- **Access Enforcement**: Only verified **Doctors** (`currentUser.role === 'hospital'`, `registeredAppUser?.role === 'hospital_staff'`, or medical credentials) and **Admins** (`role === 'admin'`) can view the underlying database records.
-- **HTTP 403 Forbidden Gate**: Unauthorized users (Recipients, Donors, unverified visitors) receive a secure **Access Denied** message explaining the regulatory restriction under HIPAA and NOTA.
-- **Zero Bypass in Production**: Self-elevation buttons are barred from the denial view, ensuring strict boundary protection.
-
----
-
-## 🤖 AI Clinical Intelligence Suite
-
-DonorConnect 4Care leverages **Google Gemini 3.1 Flash** via `@google/genai` to deliver specialized clinical AI utilities:
-
-1. **AI Clinical Cross-Match Predictor (`/api/ai/crossmatch`)**: Evaluates ABO/Rh serology, HLA loci mismatches, PRA antibody levels, and outputs a 0–100% compatibility score with clinical risk stratification.
-2. **Pre-Donation Eligibility Screener (`/api/ai/screen-eligibility`)**: Automated 12-point clinical health questionnaire screening for travel risk, medication deferrals, and recent procedures.
-3. **STAT Dispatch & Cold-Ischemia Routing Optimizer (`/api/ai/emergency-dispatch`)**: Computes optimal transport modalities (courier vs. rotary wing) considering cold ischemic time limits (e.g. 4–6 hrs for heart/lung, 24–36 hrs for kidneys).
-4. **Clinical Lab Report & Serology Interpreter (`/api/ai/lab-interpreter`)**: Parses infectious disease serology panels (HIV, Hepatitis B/C, Syphilis, CMV, HTLV) for donor clearance.
-5. **Patient Gratitude & Impact Letter Generator (`/api/ai/gratitude-letter`)**: Creates anonymized, touching gratitude letters for altruistic donors while maintaining identity confidentiality.
-6. **BioMatch ML Prognostic Compatibility (`/api/ai/biomatch-ml-prognostic`)**: Predicts 1-year and 5-year graft survival probabilities and immune tolerance profiles.
-7. **Medical Vision Document Analyzer (`/api/ai/vision-analyzer`)**: Multimodal examination of laboratory requisition slips, blood bank tags, and swab collection barcodes.
-8. **Oncology & Cellular Therapy Matcher (`/api/ai/oncology-trial-matcher`)**: Matches pediatric and adult leukemia patients with allogeneic donor stem cell registries.
-9. **Semantic Distance & Proximity Embeddings (`/api/ai/semantic-embeddings`)**: Intelligent geographic and medical-compatibility vector search.
-10. **Google Maps Grounding for Cancer Centers (`/api/ai/maps-grounding-cancer-hospitals`)**: Discovers nearby accredited blood banks, apheresis clinics, and bone marrow collection centers.
-
----
-
-## 🏗️ Technology Architecture
+## 3. Core Workflow
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Client Layer                           │
-│  React 19 + TypeScript + Vite + Tailwind CSS v4 + Motion     │
-│  • RBAC Context (AppContext)                                │
-│  • Requisition Pipeline Visual Tracker (5 Stages)           │
-│  • RegistrationsAuthWrapper Security Boundary               │
-└──────────────┬──────────────────────────────┬───────────────┘
-               │ HTTP Requests                │ Firebase SDK
-               ▼                              ▼
-┌──────────────────────────────┐  ┌───────────────────────────┐
-│     Express Node.js Proxy    │  │     Firebase Cloud        │
-│ • /api/ai/crossmatch         │  │ • Firebase Authentication │
-│ • /api/ai/emergency-dispatch │  │   (Google Sign-In)        │
-│ • /api/ai/screen-eligibility │  │ • Cloud Firestore         │
-│ • @google/genai SDK Proxy    │  │   - /users                │
-│                              │  │   - /donation_registrations│
-└──────────────┬───────────────┘  └───────────────────────────┘
-               │ User-Agent: aistudio-build
-               ▼
-┌──────────────────────────────┐
-│       Google Gemini API      │
-│ • gemini-3.1-flash-lite      │
-│ • gemini-3.8-flash           │
-└──────────────────────────────┘
+Donor / Recipient
+       │
+       ▼
+ Firebase Auth (Google OAuth)
+       │
+       ▼
+  Create Request ──────────────► Firestore
+       │                         (donation_requests /
+       │                          _registrations / users)
+       ▼
+ Donor Discovery
+ (Firestore registered donors
+  + mockData.ts demo donors)
+       │
+       ▼
+ Gemini AI Analysis
+ (via Express /api endpoints)
+       │
+       ▼
+  Dashboard / Pipeline View
+  (Pending → Verification →
+   Matching → In Progress →
+   Completed)
 ```
 
 ---
 
-## 📁 Project Directory Structure
+## 4. Key Features
 
-```plaintext
-├── .env.example                     # Environment template (GEMINI_API_KEY, APP_URL)
-├── firebase-applet-config.json      # Firebase project credentials & configuration
-├── firebase-blueprint.json          # Firestore collection definitions
-├── firestore.rules                  # Security rules for users & donations
-├── index.html                       # HTML entry point with meta tags & fonts
-├── metadata.json                    # Application metadata & Gemini capabilities
-├── package.json                     # Scripts and dependencies
-├── server.ts                        # Full-stack Express server & Gemini AI routes
-├── tsconfig.json                    # TypeScript compiler configuration
-├── vite.config.ts                   # Vite bundler & Tailwind integration
-└── src/
-    ├── main.tsx                     # React client root mount
-    ├── App.tsx                      # Top-level routing, tabs & modal orchestrator
-    ├── context/
-    │   └── AppContext.tsx           # Global state, Firestore listeners & role switching
-    ├── lib/
-    │   └── firebase.ts              # Firebase app initialization & TypeScript schemas
-    ├── types/
-    │   └── index.ts                 # Healthcare types (Blood, Organ, Marrow, Hair, Roles)
-    ├── data/
-    │   └── mockData.ts              # Comprehensive mock requisitions, donors & hospitals
-    └── components/
-        ├── common/
-        │   ├── Navbar.tsx           # 3-Zone top navigation with dynamic RBAC badges
-        │   ├── EmergencyTicker.tsx  # STAT urgent requirements marquee
-        │   └── EthicsBanner.tsx     # National Organ Transplant Act legal notice
-        ├── database/
-        │   ├── RegistrationsAuthWrapper.tsx    # 403 Forbidden Doctor/Admin guard
-        │   ├── RegistrationsDatabaseView.tsx   # Unmasked / masked directory & export
-        │   └── index.ts                        # Barrel export
-        ├── dashboard/
-        │   └── DashboardView.tsx    # High-density metrics, recent activity & stories
-        ├── discovery/
-        │   ├── DonorFinder.tsx      # Multi-category filterable donor directory
-        │   └── DonorDetailModal.tsx # Full donor profile & compatibility specs
-        ├── requests/
-        │   ├── RequestsHub.tsx      # Requisitions list with quick-status filters
-        │   ├── RequestDetailModal.tsx # 5-Stage pipeline tracker (Pending -> Completed)
-        │   └── CreateRequestModal.tsx # Patient requisition submission form
-        ├── hospital/
-        │   └── HospitalPortal.tsx   # Verified hospital inventory & trauma coordinator
-        ├── ai/
-        │   └── AIClinicalHub.tsx    # Interactive UI for Gemini AI clinical modules
-        └── admin/
-            └── AdminDashboard.tsx   # Ethics compliance oversight & audit reports
+- 🔐 **Firebase Google Authentication** — real OAuth identity, not a mock login
+- 📋 **Donation Request Pipeline** — five-stage workflow: Pending → Verification → Matching → In Progress → Completed
+- 🩸 **Four Donation Categories** — Blood, Organ, Bone Marrow & Tissue, Hair
+- 🤖 **AI-Assisted Analysis (Decision-Support Prototype)** — Google Gemini Flash provides cross-match, HLA compatibility, blood type, and risk factor analysis via 10 Express API endpoints
+- 🔄 **Deterministic Fallback Engine** — if Gemini is unavailable, a rule-based engine returns clearly-labelled demonstration output so the app remains functional
+- 📊 **Real-Time Firestore Dashboard** — live stats driven by Firestore listeners
+- 🏥 **External Reference Data** — NOTTO published statistics and e-RaktKosh status (official published data, not real-time API access; e-RaktKosh integration is pending MoHFW authorization)
+- 🏷️ **Clear Demo Data Labelling** — all sample/mock data carries an `_isDemoData` field so it is never confused with real submissions
+
+---
+
+## 5. Architecture
+
+| Layer | Technology | Notes |
+|-------|-----------|-------|
+| **Frontend** | React 19 + Vite | Single-page app, TypeScript strict mode |
+| **Styling** | Tailwind CSS v4 | Utility-first, no custom CSS framework |
+| **Backend** | Express.js (`server.ts`) | Serves Vite middleware in dev; provides `/api/*` routes |
+| **Database** | Firebase Firestore | Collections: `donation_requests`, `_registrations`, `users` |
+| **Auth** | Firebase Google OAuth | Real user identity; no password storage |
+| **AI** | Google Gemini Flash (via Express) | Decision-support prototype; clinical review required |
+| **Hosting** | `localhost:3000` (dev) / Vite build (prod) | No cloud deployment in current prototype |
+
+```
+Browser (React 19 + Tailwind v4)
+        │  HTTP / Firestore SDK
+        ▼
+  Express server.ts (:3000)
+   ├── Vite dev middleware  (serves React app)
+   └── /api/* routes       (proxies Gemini AI calls)
+        │
+        ├── Firebase Firestore  (data)
+        ├── Firebase Auth       (identity)
+        └── Google Gemini API   (AI analysis)
 ```
 
 ---
 
-## 🚀 Getting Started & Local Setup
+## 6. Tech Stack
 
-### 1. Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **npm** or **bun**: Package manager
+| Category | Technology | Version |
+|----------|-----------|---------|
+| UI Framework | React | 19 |
+| Language | TypeScript | 5.x |
+| Build Tool | Vite | Latest |
+| CSS | Tailwind CSS | v4 |
+| Backend | Express.js | 4.x |
+| Runtime | Node.js | 18+ |
+| Database | Firebase Firestore | Firebase v9+ |
+| Auth | Firebase Authentication | Firebase v9+ |
+| AI | Google Gemini Flash Lite | via `@google/generative-ai` |
+| Firebase Project | `dofi-healthcare-platform` | — |
 
-### 2. Clone Repository
+---
+
+## 7. How to Run Locally
+
+### Prerequisites
+
+- **Node.js 18+** — [nodejs.org](https://nodejs.org)
+- A **Google account** (for Firebase Auth sign-in during testing)
+- A **Google Gemini API key** (optional — AI features fall back to demo mode without it)
+
+### Steps
+
 ```bash
-git clone https://github.com/your-username/donorconnect-4care.git
-cd donorconnect-4care
-```
+# 1. Clone the repository
+git clone https://github.com/mohammed-ayaan01/Dofi.git
+cd Dofi
 
-### 3. Install Dependencies
-```bash
+# 2. Install dependencies
 npm install
-```
 
-### 4. Configure Environment
-Create a `.env` file in the project root:
-```bash
-cp .env.example .env
-```
-Populate your Google Gemini API key:
-```env
-GEMINI_API_KEY="your-gemini-api-key-here"
-PORT=3000
-```
+# 3. Create the environment file
+# Create a file named .env in the project root:
+echo "GEMINI_API_KEY=your_gemini_api_key_here" > .env
 
-### 5. Run Development Server
-```bash
+# 4. Add Firebase config (see Section 8 below)
+# Create firebase-applet-config.json in the project root
+
+# 5. Start the development server
 npm run dev
+# → Starts Express + Vite middleware on http://localhost:3000
 ```
-Open your browser at `http://localhost:3000`.
+
+> **`npm run dev`** runs `tsx server.ts`, which starts Express with Vite as middleware. Both the React frontend and the Express API are served from the same port 3000.
 
 ---
 
-## ⚙️ Environment Configuration
+## 8. Firebase Setup
 
-| Variable | Description | Required |
-| :--- | :--- | :---: |
-| `GEMINI_API_KEY` | API Key for Google Gemini (`@google/genai`). | **Yes** (for AI suite) |
-| `PORT` | Local port for Express & Vite middleware (defaults to `3000`). | Optional |
-| `APP_URL` | Base URL used for self-referential links and OAuth redirects. | Optional |
+1. Go to the [Firebase Console](https://console.firebase.google.com) and open (or create) the project: **`dofi-healthcare-platform`**
+2. **Enable Google Sign-In**: Authentication → Sign-in method → Google → Enable
+3. **Authorized Domains**: Authentication → Settings → Authorized domains → ensure `localhost` is listed
+4. **Create `firebase-applet-config.json`** in the project root with your project's web app config:
 
----
+```json
+{
+  "apiKey": "YOUR_API_KEY",
+  "authDomain": "dofi-healthcare-platform.firebaseapp.com",
+  "projectId": "dofi-healthcare-platform",
+  "storageBucket": "dofi-healthcare-platform.appspot.com",
+  "messagingSenderId": "YOUR_SENDER_ID",
+  "appId": "YOUR_APP_ID"
+}
+```
 
-## 📜 Available Scripts
-
-- `npm run dev`: Runs the full-stack dev server using `tsx server.ts` (Express + Vite middlewares on port 3000).
-- `npm run build`: Builds the Vite production bundle and compiles `server.ts` into `server.js` using `esbuild`.
-- `npm run start`: Starts the compiled production server (`node server.ts`).
-- `npm run lint`: Validates TypeScript typings across the entire codebase (`tsc --noEmit`).
-- `npm run clean`: Cleans the `dist` directory and build artifacts.
-
----
-
-## ⚖️ Clinical Ethics & Governance Standards
-
-DonorConnect 4Care is designed with strict adherence to biomedical legal statutes:
-
-1. **National Organ Transplant Act (NOTA - 42 U.S.C. 274e)**: Strictly prohibits the sale, purchase, or valuable consideration for human organs, marrow, and tissue. All living and deceased donor connections are voluntary and altruistic.
-2. **HIPAA Security & Privacy Rules (45 CFR § 164.514)**: Enforces Protected Health Information (PHI) de-identification. Public views mask telephone numbers, street addresses, and individual patient identifiers.
-3. **FDA Title 21 CFR Part 1271 & 606**: Compliance guidelines for Human Cells, Tissues, and Cellular and Tissue-Based Products (HCT/Ps) and blood bank collection standards.
-4. **WHO Guiding Principles on Human Cell, Tissue and Organ Transplantation**: Adherence to voluntary donation, traceability, and equitable clinical matching.
+> You can find these values in Firebase Console → Project Settings → Your apps → Web app → SDK setup and configuration.
 
 ---
 
-## 📄 License
+## 9. Gemini AI Setup
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+1. Get an API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Add it to your `.env` file:
+
+```
+GEMINI_API_KEY=your_key_here
+```
+
+**If `GEMINI_API_KEY` is missing or the Gemini call fails**, all AI features automatically fall back to a clearly-labelled **demonstration fallback** generated by the deterministic engine. The application remains fully functional — AI output cards will be marked as demo data.
 
 ---
 
-<p align="center">
-  Built with ❤️ for patients, donors, and healthcare heroes worldwide.
-</p>
+## 10. Real vs. Demo Data
+
+| Data | Type | Source | Label |
+|------|------|--------|-------|
+| Signed-in user identity | **Real** | Firebase Authentication | — |
+| Donation requests submitted via form | **Real** | Firestore `donation_requests` | — |
+| Donor registrations | **Real** | Firestore `_registrations` | — |
+| User profiles | **Real** | Firestore `users` | — |
+| Sample donors shown in Donor Discovery | **Demo** | `src/data/mockData.ts` | `_isDemoData: true` |
+| Demonstration emergency ticker on Dashboard | **Demo** | `mockData.ts` | Labelled in UI |
+| AI analysis when Gemini is unavailable | **Demo** | Deterministic fallback engine | Labelled in UI |
+| NOTTO statistics | **Reference** | Official published NOTTO data | Not real-time |
+| e-RaktKosh blood bank data | **Pending** | Integration pending MoHFW authorization | Not yet active |
+
+---
+
+## 11. Limitations
+
+> [!IMPORTANT]
+> Please read this section before evaluating or demoing the project.
+
+- **Prototype only** — Dofi is built as a hackathon/academic prototype. It is not designed, tested, or approved for use in real medical workflows.
+- **No HIPAA certification** — No privacy impact assessment, BAA, audit logging, or data minimisation controls required for HIPAA compliance have been implemented.
+- **AI output is not a medical decision** — All Gemini AI outputs are decision-support suggestions. They require review by a qualified clinician before any action is taken.
+- **No real-time government API access** — NOTTO statistics shown are official published data, not a live API feed. e-RaktKosh integration is pending Ministry of Health & Family Welfare (MoHFW) authorization and is not active.
+- **No production security hardening** — API keys are stored in `.env` for local dev only. A production deployment would require server-side secret management, rate limiting, and proper security review.
+- **No real donor matching** — Donor discovery uses sample data from `mockData.ts`. A production system would need verified donor registries and clinical matching protocols.
+
+---
+
+## 12. Demo Instructions
+
+1. **Start the app**: `npm run dev` → open [http://localhost:3000](http://localhost:3000)
+2. **Sign in**: Click *Sign in with Google* and authenticate with any Google account
+3. **Create a request**: Click *Create Request* → fill in Blood / Emergency / any hospital → Submit
+4. **Explore AI Hub**: Click *AI Hub* → select *Eligibility Triage Assistant* → *Run AI Analysis* to see Gemini output (or demo fallback)
+5. **View pipeline**: Click *All Requests* to see the request you created moving through the five-stage pipeline
+
+---
+
+## 13. License
+
+This project is licensed under the **Apache License 2.0**.  
+See [LICENSE](./LICENSE) for the full text.
+
+---
+
+*Dofi — a prototype by [mohammed-ayaan01](https://github.com/mohammed-ayaan01)*

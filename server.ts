@@ -22,7 +22,7 @@ app.use(express.json({ limit: '10mb' }));
 
 // Initialize Google GenAI client according to SKILL.md
 // Must include User-Agent header 'aistudio-build'
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : undefined;
 let ai: GoogleGenAI | null = null;
 if (apiKey) {
   ai = new GoogleGenAI({
@@ -60,10 +60,15 @@ async function executeGeminiPrompt(
         },
       });
 
-      const text = response.text || '';
+      const text = response.text?.trim() || '';
       if (text) {
         return { text, model };
       }
+
+      // If response text is empty, check candidate details and finishReason
+      const candidate = response.candidates?.[0];
+      const finishReason = candidate?.finishReason || 'EMPTY_CONTENT';
+      throw new Error(`Model ${model} returned empty content with finishReason: ${finishReason}`);
     } catch (err: any) {
       lastError = err;
       console.warn(`[DonorConnect AI] Attempt with ${model} failed:`, err?.message || err);
@@ -168,8 +173,8 @@ Provide a deep, realistic clinical compatibility analysis with locus-by-locus re
       return res.json({
         success: true,
         aiPowered: false,
-        modelUsed: 'DonorConnect Rule-Based Clinical Engine',
-        notice: 'Clinical rule-based analysis (Gemini offline or quota limit)',
+        modelUsed: 'Demonstration Fallback Engine',
+        notice: 'DEMONSTRATION FALLBACK � Gemini unavailable. Result is a deterministic prototype output, not a live AI response.',
         data: fallbackResult,
       });
     }
@@ -263,7 +268,7 @@ Provide a meticulous medical triage decision with exact deferral days if applica
         success: true,
         aiPowered: false,
         modelUsed: 'DonorConnect Clinical Safety Engine',
-        notice: 'Clinical rule-based screening (Gemini offline or quota limit)',
+        notice: 'DEMONSTRATION FALLBACK � Gemini unavailable. Result is a deterministic prototype output, not a live AI response.',
         data: fallbackResult,
       });
     }
@@ -593,7 +598,7 @@ Simulate the calibrated prognostic curve, calculate exact SHAP attributions expl
         success: true,
         aiPowered: false,
         modelUsed: 'BioMatch ML Gradient-Boosted Prognostic Engine',
-        notice: 'Real-time biostatistical inference engine (CIBMTR/UNOS calibrated)',
+        notice: 'DEMONSTRATION FALLBACK � Gemini unavailable. Result is a demonstration output, not real biostatistical inference.',
         data: fallbackResult,
       });
     }
@@ -686,7 +691,7 @@ Perform deep optical analysis:
       success: true,
       aiPowered: false,
       modelUsed: 'BioVision Optical Inspection Engine',
-      notice: 'Calibrated optical morphometric inspection',
+      notice: 'DEMONSTRATION FALLBACK � Gemini unavailable. Result is a demonstration output, not a real specimen analysis.',
       data: fallbackResult,
     });
   } catch (error: any) {
@@ -890,7 +895,7 @@ Output in clean JSON matching:
         success: true,
         aiPowered: false,
         groundedWithMaps: false,
-        notice: 'Using verified clinical oncology hospital database (Maps Grounding rate limit/fallback)',
+        notice: 'DEMONSTRATION FALLBACK � Gemini unavailable. Using static reference data, not live AI output.',
         data: {
           searchQuery: targetSearch,
           hospitalsFound: getSimulatedCancerHospitals(targetSearch)

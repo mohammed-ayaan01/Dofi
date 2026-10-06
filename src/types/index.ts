@@ -1,6 +1,6 @@
 export type DonationCategory = 'blood' | 'organ' | 'bone_tissue' | 'hair';
 
-export type UserRole = 'donor' | 'recipient' | 'hospital' | 'admin';
+export type UserRole = 'user' | 'donor' | 'hospital' | 'admin';
 
 export type BloodGroup = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
 
@@ -17,6 +17,22 @@ export type HairTexture = 'straight' | 'wavy' | 'curly' | 'coily';
 export type UrgencyLevel = 'emergency' | 'urgent' | 'standard';
 
 export type RequestStatus = 'pending' | 'verified' | 'matched' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface DonorResponse {
+  id: string;
+  requestId: string;
+  donorId: string;
+  donorUserId: string;
+  donorName: string;
+  bloodGroup: BloodGroup;
+  city?: string;
+  status: 'available' | 'confirmed' | 'fulfilled' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
+  note?: string;
+  hospitalId?: string;
+  requesterId?: string;
+}
 
 export interface ScheduledSlot {
   id: string;

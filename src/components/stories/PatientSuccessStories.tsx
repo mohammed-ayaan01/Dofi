@@ -73,8 +73,8 @@ export const PatientSuccessStories: React.FC = () => {
       submitPatientStory({
         recipientName: formData.recipientName,
         age: parseInt(formData.age, 10) || 30,
-        city: formData.city || 'Chicago',
-        state: formData.state || 'IL',
+        city: formData.city || 'Hyderabad',
+        state: formData.state || 'Telangana',
         category: formData.category,
         condition: formData.condition || 'Clinical Condition',
         receivedItem: formData.receivedItem || 'Verified Healthcare Match',

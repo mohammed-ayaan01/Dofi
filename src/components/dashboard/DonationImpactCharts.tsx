@@ -88,15 +88,15 @@ export const DonationImpactCharts: React.FC = () => {
               <TrendingUp className="h-4 w-4" />
             </span>
             <h3 className="text-base font-bold text-slate-900 tracking-tight">
-              Donation Impact Metrics
+              Donation Activity Charts
             </h3>
-            <span className="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3" />
-              Verified Clinical Outcomes
+            <span className="bg-amber-50 text-amber-700 text-xs font-semibold px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+              <Sparkles className="h-3 w-3" />
+              Demonstration Metrics
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Real-time telemetry showing successful matches over time and distribution across Blood, Organ, Bone, and Hair categories
+            Illustrative sample data showing how activity would appear across Blood, Organ, Bone, and Hair categories. Not real clinical outcomes.
           </p>
         </div>
 
@@ -127,27 +127,27 @@ export const DonationImpactCharts: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Highlights Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 text-xs">
+      {/* Sample Metrics Bar — clearly labelled as demonstration */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-amber-50 p-3.5 rounded-xl border border-amber-200/80 text-xs">
         <div>
-          <span className="text-[11px] text-slate-500 font-medium">Total Matches Completed</span>
+          <span className="text-[11px] text-amber-700 font-medium">Sample Matches</span>
           <div className="text-xl font-bold text-slate-900 font-mono mt-0.5">438</div>
-          <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5 mt-0.5">
-            ↑ +28% vs previous quarter
+          <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-0.5 mt-0.5">
+            Demo data — not real outcomes
           </span>
         </div>
         <div>
-          <span className="text-[11px] text-slate-500 font-medium">Avg. Emergency Match Time</span>
+          <span className="text-[11px] text-amber-700 font-medium">Demo Response Time</span>
           <div className="text-xl font-bold text-rose-700 font-mono mt-0.5">3.2 hrs</div>
-          <span className="text-[10px] text-rose-600 font-semibold mt-0.5">STAT trauma triage response</span>
+          <span className="text-[10px] text-amber-600 font-semibold mt-0.5">Illustrative figure</span>
         </div>
         <div>
-          <span className="text-[11px] text-slate-500 font-medium">Clinical Cross-Match Accuracy</span>
-          <div className="text-xl font-bold text-teal-700 font-mono mt-0.5">99.4%</div>
-          <span className="text-[10px] text-teal-600 font-semibold mt-0.5">Zero adverse serology alerts</span>
+          <span className="text-[11px] text-amber-700 font-medium">AI Analysis Demo</span>
+          <div className="text-xl font-bold text-teal-700 font-mono mt-0.5">AI-Assisted</div>
+          <span className="text-[10px] text-amber-600 font-semibold mt-0.5">Requires clinical review</span>
         </div>
         <div>
-          <span className="text-[11px] text-slate-500 font-medium">Non-Commercial Compliance</span>
+          <span className="text-[11px] text-amber-700 font-medium">Platform Status</span>
           <div className="text-xl font-bold text-indigo-700 font-mono mt-0.5">100%</div>
           <span className="text-[10px] text-indigo-600 font-semibold mt-0.5">Strict NOTA & WHO standard</span>
         </div>
@@ -286,15 +286,15 @@ export const DonationImpactCharts: React.FC = () => {
           <div className="grid grid-cols-4 gap-1 pt-1 border-t border-slate-100 text-center text-[10px]">
             <div className="text-rose-700 font-medium">
               <span className="block font-bold">Blood</span>
-              <span>412 Units</span>
+              <span>Sample data</span>
             </div>
             <div className="text-teal-700 font-medium">
               <span className="block font-bold">Organ</span>
-              <span>19 Center Tx</span>
+              <span>Sample data</span>
             </div>
             <div className="text-indigo-700 font-medium">
               <span className="block font-bold">Bone/Marrow</span>
-              <span>84 Pledges</span>
+              <span>Sample data</span>
             </div>
             <div className="text-amber-700 font-medium">
               <span className="block font-bold">Hair</span>
