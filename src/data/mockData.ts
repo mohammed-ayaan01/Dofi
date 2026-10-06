@@ -57,9 +57,9 @@ export const DEMO_USERS: Record<string, User> = {
   },
   admin: {
     id: 'usr_admin_governance',
-    name: 'Platform Compliance Officer (Admin)',
-    email: 'compliance@donorconnect4care.org',
-    phone: '+1 (800) 555-CARE',
+    name: 'Platform Administrator',
+    email: 'admin@dofi.org',
+    phone: '+91 98490 00000',
     role: 'admin',
     city: 'Hyderabad',
     state: 'Telangana',
