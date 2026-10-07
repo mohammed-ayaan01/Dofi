@@ -117,17 +117,30 @@ export const Navbar: React.FC = () => {
               {isDonorExperience ? 'My Dashboard' : 'Dashboard'}
             </button>
             {isDonorExperience ? (
-              <button
-                onClick={() => {
-                  setActiveTab('dashboard');
-                  setTimeout(() => {
-                    document.getElementById('potential-requests')?.scrollIntoView({ behavior: 'smooth' });
-                  }, 50);
-                }}
-                className="transition-colors pb-0.5 border-b-2 border-transparent text-slate-600 hover:text-slate-900 cursor-pointer"
-              >
-                Find Blood Requests
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    setActiveTab('dashboard');
+                    setTimeout(() => {
+                      document.getElementById('potential-requests')?.scrollIntoView({ behavior: 'smooth' });
+                    }, 50);
+                  }}
+                  className="transition-colors pb-0.5 border-b-2 border-transparent text-slate-600 hover:text-slate-900 cursor-pointer"
+                >
+                  Find Blood Requests
+                </button>
+                <button
+                  onClick={() => setActiveTab('ai-clinical-tools')}
+                  className={`transition-colors pb-0.5 border-b-2 cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'ai-clinical-tools'
+                      ? 'border-teal-600 text-teal-700 font-bold'
+                      : 'border-transparent text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-teal-600" />
+                  <span>AI Clinical Tools</span>
+                </button>
+              </>
             ) : (
               <button
                 onClick={() => setActiveTab('find-donors')}
@@ -381,17 +394,28 @@ export const Navbar: React.FC = () => {
           {isDonorExperience ? 'My Dashboard' : 'Dashboard'}
         </button>
         {isDonorExperience ? (
-          <button
-            onClick={() => {
-              setActiveTab('dashboard');
-              setTimeout(() => {
-                document.getElementById('potential-requests')?.scrollIntoView({ behavior: 'smooth' });
-              }, 50);
-            }}
-            className="shrink-0 text-slate-600 hover:text-slate-900 cursor-pointer"
-          >
-            Find Blood Requests
-          </button>
+          <>
+            <button
+              onClick={() => {
+                setActiveTab('dashboard');
+                setTimeout(() => {
+                  document.getElementById('potential-requests')?.scrollIntoView({ behavior: 'smooth' });
+                }, 50);
+              }}
+              className="shrink-0 text-slate-600 hover:text-slate-900 cursor-pointer"
+            >
+              Find Blood Requests
+            </button>
+            <button
+              onClick={() => setActiveTab('ai-clinical-tools')}
+              className={`shrink-0 flex items-center gap-1 cursor-pointer ${
+                activeTab === 'ai-clinical-tools' ? 'text-teal-600 font-bold' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Sparkles className="h-3 w-3 text-teal-600" />
+              <span>AI Clinical Tools</span>
+            </button>
+          </>
         ) : (
           <button
             onClick={() => setActiveTab('find-donors')}

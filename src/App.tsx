@@ -25,6 +25,7 @@ import { AIClinicalHub } from './components/ai/AIClinicalHub';
 import { RegistrationsDatabaseView } from './components/database/RegistrationsDatabaseView';
 import { RegistrationsAuthWrapper } from './components/database/RegistrationsAuthWrapper';
 import { DonorDetailModal } from './components/discovery/DonorDetailModal';
+import { DonorAIToolsView } from './components/donor/DonorAIToolsView';
 import { ShieldCheck } from 'lucide-react';
 
 /**
@@ -76,6 +77,9 @@ const AuthenticatedApp: React.FC = () => {
           <RegistrationsAuthWrapper>
             <RegistrationsDatabaseView />
           </RegistrationsAuthWrapper>
+        )}
+        {activeTab === 'ai-clinical-tools' && (
+          currentUser.role === 'donor' ? <DonorAIToolsView /> : <DashboardView />
         )}
       </main>
 

@@ -55,8 +55,8 @@ interface AppContextType {
   impactStats: ImpactStats;
   
   // UI state
-  activeTab: 'dashboard' | 'find-donors' | 'requests' | 'hospital' | 'admin' | 'ethics' | 'ai-suite' | 'registrations';
-  setActiveTab: (tab: 'dashboard' | 'find-donors' | 'requests' | 'hospital' | 'admin' | 'ethics' | 'ai-suite' | 'registrations') => void;
+  activeTab: 'dashboard' | 'find-donors' | 'requests' | 'hospital' | 'admin' | 'ethics' | 'ai-suite' | 'registrations' | 'ai-clinical-tools';
+  setActiveTab: (tab: 'dashboard' | 'find-donors' | 'requests' | 'hospital' | 'admin' | 'ethics' | 'ai-suite' | 'registrations' | 'ai-clinical-tools') => void;
   activeFilterCategory: 'all' | DonationCategory;
   setActiveFilterCategory: (cat: 'all' | DonationCategory) => void;
   selectedRequest: DonationRequest | null;
@@ -182,7 +182,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   // UI state
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'find-donors' | 'requests' | 'hospital' | 'admin' | 'ethics' | 'ai-suite' | 'registrations'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'find-donors' | 'requests' | 'hospital' | 'admin' | 'ethics' | 'ai-suite' | 'registrations' | 'ai-clinical-tools'>('dashboard');
   const [activeFilterCategory, setActiveFilterCategory] = useState<'all' | DonationCategory>('all');
   const [selectedRequest, setSelectedRequest] = useState<DonationRequest | null>(null);
   const [selectedDonor, setSelectedDonor] = useState<DonorProfile | null>(null);

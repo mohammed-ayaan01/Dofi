@@ -520,3 +520,19 @@ export interface AISemanticVectorResult {
   }[];
 }
 
+export interface DonorEligibilityScreeningResult {
+  status: 'eligible_for_review' | 'temporarily_deferred' | 'needs_manual_review';
+  statusLabel?: string;
+  summary: string;
+  parameters: {
+    name: string;
+    value: string;
+    status: 'pass' | 'review' | 'flag';
+    reason: string;
+  }[];
+  recommendation: string;
+  disclaimer: string;
+  reportId?: string;
+  generatedAt?: string;
+}
+

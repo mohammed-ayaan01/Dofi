@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 dotenv.config();
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path.dirname(__filename);
@@ -13,7 +13,8 @@ var portArgIndex = process.argv.indexOf("--port");
 var port = portArgIndex !== -1 && process.argv[portArgIndex + 1] ? Number(process.argv[portArgIndex + 1]) : process.env.PORT ? Number(process.env.PORT) : 3e3;
 var isProd = process.env.NODE_ENV === "production";
 app.use(express.json({ limit: "10mb" }));
-var apiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : void 0;
+var getGeminiApiKey = () => process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : void 0;
+var apiKey = getGeminiApiKey();
 var ai = null;
 if (apiKey) {
   ai = new GoogleGenAI({
@@ -25,37 +26,299 @@ if (apiKey) {
     }
   });
 }
-async function executeGeminiPrompt(prompt, systemInstruction, forceJson = true) {
-  if (!ai) {
-    throw new Error("GEMINI_API_KEY environment variable is not configured");
+function getActiveAIClient() {
+  const key = getGeminiApiKey();
+  if (!key) {
+    const err = new Error("Gemini API key is not configured.");
+    err.code = "MISSING_API_KEY";
+    err.status = 503;
+    throw err;
   }
+  return {
+    client: new GoogleGenAI({
+      apiKey: key,
+      httpOptions: {
+        headers: {
+          "User-Agent": "aistudio-build"
+        }
+      }
+    }),
+    key
+  };
+}
+var donorEligibilitySchema = {
+  type: Type.OBJECT,
+  properties: {
+    status: {
+      type: Type.STRING,
+      enum: ["eligible_for_review", "temporarily_deferred", "needs_manual_review"],
+      description: "Overall preliminary screening status"
+    },
+    statusLabel: {
+      type: Type.STRING,
+      description: "Human-readable clinical status title"
+    },
+    summary: {
+      type: Type.STRING,
+      description: "Clear, objective 2-3 sentence clinical overview of the screening results"
+    },
+    parameters: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          name: {
+            type: Type.STRING,
+            description: "Parameter evaluated (Age, Weight, Hemoglobin, Interval, Medication, Infection)"
+          },
+          value: {
+            type: Type.STRING,
+            description: "Entered candidate value"
+          },
+          status: {
+            type: Type.STRING,
+            enum: ["pass", "review", "flag"],
+            description: "Status of the parameter"
+          },
+          reason: {
+            type: Type.STRING,
+            description: "Clinical rationale for this parameter assessment"
+          }
+        },
+        required: ["name", "value", "status", "reason"]
+      }
+    },
+    recommendation: {
+      type: Type.STRING,
+      description: "Concrete next steps for the donor"
+    },
+    disclaimer: {
+      type: Type.STRING,
+      description: "Mandatory clinical safety notice: Final donor eligibility must be confirmed by the hospital or qualified blood-bank professional."
+    }
+  },
+  required: ["status", "summary", "parameters", "recommendation", "disclaimer"]
+};
+async function executeGeminiPrompt(prompt, systemInstruction, forceJson = true, responseSchema) {
+  const { client } = getActiveAIClient();
   const candidateModels = ["gemini-3.1-flash-lite", "gemini-3.8-flash"];
   let lastError = null;
   for (const model of candidateModels) {
     try {
-      const response = await ai.models.generateContent({
+      const config = {
+        systemInstruction,
+        temperature: 0.2
+      };
+      if (forceJson) {
+        config.responseMimeType = "application/json";
+        if (responseSchema) {
+          config.responseSchema = responseSchema;
+        }
+      }
+      const response = await client.models.generateContent({
         model,
         contents: prompt,
-        config: {
-          systemInstruction,
-          temperature: 0.2,
-          ...forceJson ? { responseMimeType: "application/json" } : {}
-        }
+        config
       });
-      const text = response.text?.trim() || "";
-      if (text) {
-        return { text, model };
+      const candidates = response.candidates;
+      if (!candidates || candidates.length === 0) {
+        console.warn(`[Dofi AI] Model ${model} returned no candidates. Prompt feedback:`, response.promptFeedback);
+        const err = new Error("Gemini returned no usable content.");
+        err.code = "NO_CANDIDATES";
+        err.details = response.promptFeedback?.blockReason || "No candidates generated";
+        lastError = err;
+        continue;
       }
-      const candidate = response.candidates?.[0];
-      const finishReason = candidate?.finishReason || "EMPTY_CONTENT";
-      throw new Error(`Model ${model} returned empty content with finishReason: ${finishReason}`);
+      const candidate = candidates[0];
+      const finishReason = candidate.finishReason;
+      if (finishReason === "SAFETY" || finishReason === "RECITATION" || finishReason === "BLOCKLIST") {
+        console.warn(`[Dofi AI] Model ${model} candidate blocked by safety filter:`, {
+          finishReason,
+          safetyRatings: candidate.safetyRatings
+        });
+        const err = new Error("Response was blocked by content safety filters.");
+        err.code = "SAFETY_BLOCKED";
+        err.status = 422;
+        err.details = `Finish reason: ${finishReason}`;
+        throw err;
+      }
+      const text = response.text?.trim() || "";
+      if (!text) {
+        console.warn(`[Dofi AI] Model ${model} returned empty response text. Finish reason: ${finishReason}`);
+        const err = new Error("Gemini returned no usable content.");
+        err.code = "EMPTY_CONTENT";
+        err.details = `Finish reason: ${finishReason || "EMPTY"}`;
+        lastError = err;
+        continue;
+      }
+      return { text, model, response };
     } catch (err) {
       lastError = err;
-      console.warn(`[DonorConnect AI] Attempt with ${model} failed:`, err?.message || err);
+      if (err.status === 401 || err.code === "SAFETY_BLOCKED" || err.code === "MISSING_API_KEY") {
+        throw err;
+      }
+      console.warn(`[Dofi AI] Attempt with ${model} failed:`, err?.message || err);
     }
   }
   throw lastError || new Error("All Gemini model invocations failed");
 }
+app.post("/api/ai/donor-eligibility", async (req, res) => {
+  try {
+    const {
+      candidateName,
+      bloodGroup,
+      age,
+      weightKg,
+      hemoglobin,
+      lastDonatedMonths,
+      recentMedicationAspirin,
+      recentFeverInfection
+    } = req.body;
+    if (!age || !weightKg || !hemoglobin) {
+      return res.status(400).json({
+        error: "Age, weight, and hemoglobin are required clinical parameters.",
+        code: "MISSING_PARAMETERS"
+      });
+    }
+    const currentKey = getGeminiApiKey();
+    if (!currentKey) {
+      return res.status(503).json({
+        error: "Gemini API key is not configured.",
+        code: "MISSING_API_KEY"
+      });
+    }
+    const systemInstruction = `You are a Clinical Blood Donation Safety & Pre-Screening Assistant for Dofi, a blood donation coordination platform.
+You evaluate preliminary blood donor screening parameters against standard blood banking eligibility principles (e.g., general WHO, AABB, and Red Cross demonstration references).
+IMPORTANT MEDICAL SAFETY: This is a preliminary AI-assisted screening assessment ONLY, NOT a definitive medical approval, medical clearance, or guarantee of eligibility.
+Final donor eligibility must be confirmed by the hospital or qualified blood-bank professional.`;
+    const prompt = `Evaluate the following preliminary blood donation candidate parameters:
+Candidate Name: ${candidateName || "Candidate"}
+Blood Group: ${bloodGroup || "Blood Donation"}
+Age: ${age} years (reference range: 18-65)
+Weight: ${weightKg} kg (reference minimum: 50 kg)
+Hemoglobin: ${hemoglobin} g/dL (reference minimum: 12.5 g/dL females, 13.0 g/dL males)
+Last Donated: ${lastDonatedMonths !== void 0 && lastDonatedMonths !== null ? `${lastDonatedMonths} months ago` : "First-time or not recorded"} (reference minimum interval: 3 months / 84 days)
+Recent Medication / Aspirin in past 48h: ${recentMedicationAspirin ? "Yes" : "No"} (aspirin deferral for platelet apheresis: 48h; whole blood acceptable)
+Recent Fever / Cough / Acute Infection in past 14 days: ${recentFeverInfection ? "Yes" : "No"} (must be symptom-free for at least 14 days)
+
+Evaluate all 6 parameters individually:
+1. Age
+2. Weight
+3. Hemoglobin
+4. Last Donation Interval
+5. Recent Medication / Aspirin
+6. Recent Fever / Infection
+
+Assign each parameter a status of "pass", "review", or "flag" with an objective medical reason.
+Synthesize the overall status:
+- "eligible_for_review": all parameters pass or minor non-deferring observation.
+- "temporarily_deferred": recent infection within 14 days, donation interval < 3 months, or temporary medication concern.
+- "needs_manual_review": borderline age, borderline weight (<50kg), or hemoglobin below thresholds requiring on-site hematology evaluation.`;
+    const { text, model } = await executeGeminiPrompt(prompt, systemInstruction, true, donorEligibilitySchema);
+    const cleanText = text?.trim();
+    if (!cleanText) {
+      console.warn("[Dofi AI] Empty text received from executeGeminiPrompt");
+      return res.status(502).json({
+        error: "Gemini returned no usable content.",
+        code: "EMPTY_CONTENT"
+      });
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(cleanText);
+    } catch (parseErr) {
+      console.warn("[Dofi AI] Failed to parse structured JSON from Gemini output:", {
+        model,
+        error: parseErr?.message
+      });
+      return res.status(502).json({
+        error: "AI service returned an invalid result.",
+        code: "MALFORMED_JSON",
+        details: parseErr?.message
+      });
+    }
+    const validStatuses = ["eligible_for_review", "temporarily_deferred", "needs_manual_review"];
+    if (!parsed || typeof parsed !== "object" || !validStatuses.includes(parsed.status)) {
+      console.warn("[Dofi AI] Missing or invalid status in parsed result:", parsed?.status);
+      return res.status(502).json({
+        error: "AI service returned an invalid result (invalid status).",
+        code: "SCHEMA_MISMATCH"
+      });
+    }
+    if (!Array.isArray(parsed.parameters) || parsed.parameters.length === 0) {
+      console.warn("[Dofi AI] Missing or empty parameters array in parsed result");
+      return res.status(502).json({
+        error: "AI service returned an invalid result (missing parameters).",
+        code: "SCHEMA_MISMATCH"
+      });
+    }
+    if (!parsed.summary || typeof parsed.summary !== "string") {
+      return res.status(502).json({
+        error: "AI service returned an invalid result (missing summary).",
+        code: "SCHEMA_MISMATCH"
+      });
+    }
+    if (!parsed.statusLabel) {
+      parsed.statusLabel = parsed.status === "eligible_for_review" ? "Eligible for Clinical Review" : parsed.status === "temporarily_deferred" ? "Temporarily Deferred" : "Needs Manual Clinical Review";
+    }
+    if (!parsed.disclaimer) {
+      parsed.disclaimer = "This document is an AI-assisted preliminary screening assessment only. It is not medical clearance or a guarantee of eligibility. Final donor eligibility must be confirmed by the hospital or qualified blood-bank professional.";
+    }
+    return res.json({
+      success: true,
+      aiPowered: true,
+      modelUsed: model,
+      data: parsed
+    });
+  } catch (error) {
+    console.error("[Dofi AI] Error in /api/ai/donor-eligibility:", error?.message || error);
+    const msg = error?.message || "";
+    const status = error?.status;
+    if (error?.code === "MISSING_API_KEY" || msg.includes("API key is not configured")) {
+      return res.status(503).json({
+        error: "Gemini API key is not configured.",
+        code: "MISSING_API_KEY"
+      });
+    }
+    if (status === 401 || msg.includes("API_KEY_INVALID") || msg.includes("401")) {
+      return res.status(401).json({
+        error: "Invalid or unauthorized Gemini API key.",
+        code: "INVALID_API_KEY"
+      });
+    }
+    if (status === 403 || msg.includes("PERMISSION_DENIED") || msg.includes("403")) {
+      return res.status(403).json({
+        error: "Gemini API access forbidden.",
+        code: "API_FORBIDDEN"
+      });
+    }
+    if (status === 429 || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("rate limit") || msg.includes("RESOURCE_EXHAUSTED")) {
+      return res.status(429).json({
+        error: "AI service quota exceeded. Please try again later.",
+        code: "QUOTA_EXCEEDED",
+        isQuotaError: true
+      });
+    }
+    if (error?.code === "SAFETY_BLOCKED" || status === 422) {
+      return res.status(422).json({
+        error: "Response was blocked by content safety filters.",
+        code: "SAFETY_BLOCKED",
+        details: error?.details
+      });
+    }
+    if (error?.code === "NO_CANDIDATES" || error?.code === "EMPTY_CONTENT") {
+      return res.status(502).json({
+        error: "Gemini returned no usable content.",
+        code: error.code,
+        details: error.details
+      });
+    }
+    return res.status(status || 500).json({
+      error: msg || "Internal server error",
+      code: error?.code || "INTERNAL_ERROR"
+    });
+  }
+});
 app.post("/api/ai/screen-eligibility", async (req, res) => {
   try {
     const {
